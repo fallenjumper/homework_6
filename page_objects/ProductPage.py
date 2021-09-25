@@ -24,6 +24,7 @@ class ProductPage(BasePage):
                       'GBP/EUR': 1.2809643913,
                       'GBP/USD': 1.6326309224,
                       }
+
     @allure.step("Get {1} price of product")
     def get_price(self, price_type, current_currency):
         if price_type == "last":
