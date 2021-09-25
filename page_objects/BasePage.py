@@ -1,3 +1,4 @@
+import logging
 import selenium.webdriver.remote.webelement
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,16 +12,20 @@ class BasePage:
         self.browser = browser
         self.browser.get(page_url)
         self.wait_timeout = 5
+        self.logger = logging.getLogger(type(self).__name__)
 
     def _accept_alert(self):
+        self.logger.info("Accept alert")
         return self.browser.switch_to.alert.accept()
 
     def _open_new_tab(self, url):
+        self.logger.info("Open new tab")
         self.browser.execute_script('window.open();')
         self.browser.switch_to.window(window_name=self.browser.window_handles[-1])
         self.browser.get(url)
 
     def _close_last_window(self):
+        self.logger.info("Close last opened window")
         if len(self.browser.window_handles) > 1:
             self.browser.switch_to.window(window_name=self.browser.window_handles[-1])
             self.browser.close()
@@ -29,29 +34,34 @@ class BasePage:
             raise ValueError("Opened only one tab. Can't close.")
 
     def _wait_until(self, locator, target_condition=EC.visibility_of_element_located, **kwargs):
+        self.logger.info(f"Wait element {locator} find on the screen for a timeout: {self.wait_timeout}s")
         try:
             return WebDriverWait(self.browser, self.wait_timeout).until(target_condition(locator, **kwargs))
         except TimeoutException:
             raise AssertionError(f"Can`t find element by locator: {locator}")
 
     def _wait_until_not(self, locator, target_condition=EC.visibility_of_element_located, **kwargs):
+        self.logger.info(f"Wait element {locator} leave the screen for a timeout: {self.wait_timeout}s")
         try:
             return WebDriverWait(self.browser, self.wait_timeout).until_not(target_condition(locator, **kwargs))
         except TimeoutException:
             raise AssertionError(f"Element did not leave the screen for a timeout: {self.wait_timeout}s")
 
     def _change_url_on_submit(self, btn_locator: tuple):
+        self.logger.info(f"Check changing url after click submit")
         old_url = self.browser.current_url
         self._element(btn_locator).click()
         self._wait_until(old_url, EC.url_changes)
 
     def _element(self, locator: tuple):
+        self.logger.info(f"Find element by locator: {locator}")
         try:
             return self.browser.find_element(*locator)
         except Exception as e:
             raise ValueError(f"Can`t find element by locator: {locator} with exception: {e}")
 
     def _elements(self, locator: tuple, number_of_element=None):
+        self.logger.info(f"Find elements by locator: {locator}. Optionally select element: {number_of_element}")
         result_elements = self.browser.find_elements(*locator)
         if not result_elements:
             raise ValueError(f"Can`t find elements by locator: {locator}")
@@ -60,31 +70,37 @@ class BasePage:
         return result_elements
 
     def _sub_elements(self, root_elements: selenium.webdriver.remote.webelement.WebElement, locator: tuple):
+        self.logger.info(f"Find element by locator: {locator} on sub element {root_elements}")
         result_elements = root_elements.find_elements(*locator)
         if not result_elements:
             raise ValueError(f"Can`t find elements by locator: {locator}")
         return result_elements
 
     def _get_text(self, locator: tuple):
+        self.logger.info(f"Get text from element: {locator}")
         return self._element(locator).text
 
     def _element_by_attribute_value(self, locator: tuple, attribute, attribute_value):
+        self.logger.info(f"Find element where attribyte({attribute}) = value({attribute_value} by locator: {locator}")
         for elem in self._elements(locator):
             if elem.get_attribute(attribute) == attribute_value:
                 return elem
         raise ValueError(f"Не удалось найти элемент, у которого аттрибут {attribute} равен {attribute_value}")
 
     def _get_title(self):
+        self.logger.info("Get browser title")
         return self.browser.title
 
     # check similar title, page_name, product_name
     def compare_page_names(self):
+        self.logger.info("compare page names")
         page_name = self._elements(HeaderElements.PAGE_NAME, 1).text
         content_name = self._get_text(self.CONTENT_NAME)
         assert page_name == content_name == self._get_title()
         return self
 
     def check_page_header(self):
+        self.logger.info(f"Check page header")
         # check placeholder on search box
         assert self._element(HeaderElements.SEARCH_TEXTBOX).get_attribute("placeholder") == "Search"
 

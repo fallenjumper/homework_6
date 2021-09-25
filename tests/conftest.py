@@ -1,3 +1,4 @@
+import logging
 import os
 import pytest
 from selenium import webdriver
@@ -12,6 +13,8 @@ path_to_selenoid = os.path.expanduser("~\\proj\\selenoid\\")
 # port vars for exec with docker
 cart_port = 8081
 php_admin_port = 8888
+# configure output log file
+logging.basicConfig(level=logging.INFO, filename="log3.log")
 
 
 def pytest_addoption(parser):
@@ -26,15 +29,22 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def url(request):
+    target_url = request.config.getoption("--url")
+    logger = logging.getLogger("url_handler")
+
     def clear_containers():
+        logger.info(f"Cleaning opencart containers...")
         subprocess.run("FOR /f \"tokens=*\" %i IN ('docker ps -q') DO docker stop %i", shell=True)
         subprocess.run("docker container prune -f & docker volume prune -f & docker network prune -f", shell=True)
 
     request.addfinalizer(clear_containers)
 
-    if request.config.getoption("--url"):
-        return request.config.getoption("--url")
+    # if url empty -> run opencart in docker
+    if target_url:
+        logger.info(f"Tests run with url: {target_url}")
+        return target_url
     else:
+        logger.info(f"Tests run on local opencart docker container")
         host_ip = socket.gethostbyname(socket.gethostname())
         os.environ['OPENCART_PORT'] = str(cart_port)
         os.environ['PHPADMIN_PORT'] = str(php_admin_port)
@@ -43,11 +53,13 @@ def url(request):
         opencart_url = f"http://{host_ip}:{cart_port}/"
 
         # wait when docker finally loading
-        for i in range(30):
+        for i in range(1, 30):
             try:
                 requests.get(opencart_url).status_code == 200
+                logger.info("Network access to opencart is OK. Run tests.")
                 return opencart_url
             except requests.ConnectionError:
+                logger.info(f"Failed connect to opencart in docker. Attempt {i}/30 Retry...")
                 time.sleep(1)
         raise EnvironmentError("Что-то случилось с докером. Не могу подключиться!")
 
@@ -61,6 +73,8 @@ def selenoid_handler(request):
     sel_logs = request.config.getoption("--selenoid_logs")
     videos = request.config.getoption("--videos")
     if selenoid_ip:
+        logger = logging.getLogger("selenoid_handler")
+        logger.info(f"Run tests on Selenoid server {selenoid_ip}")
         subprocess.run(f"cd {path_to_selenoid} & cm selenoid start --args \"-limit=12\" & cm selenoid-ui start",
                        shell=True)
         # get available versions for browser in docker
@@ -79,7 +93,11 @@ def selenoid_handler(request):
 @pytest.fixture
 def browser(request, selenoid_handler):
     _browser = request.config.getoption("--browser")
+    logger = logging.getLogger("browser_fixture")
+    test_name = request.node.name
+    logger.info(f"Started test with name {test_name} with browser: {_browser}")
 
+    # configure run in selenoid
     if selenoid_handler:
         caps = {
             "browserName": _browser,
@@ -97,6 +115,7 @@ def browser(request, selenoid_handler):
             command_executor=f"http://{selenoid_handler['selenoid_ip']}:4444/wd/hub",
             desired_capabilities=caps
         )
+        logger.info(f"Target browser: {_browser} and version: {selenoid_handler['bversion']}")
     else:
         if _browser == "chrome":
             driver = webdriver.Chrome(executable_path=f"{DRIVERS}\\chromedriver.exe")
@@ -104,5 +123,11 @@ def browser(request, selenoid_handler):
             driver = webdriver.Opera(executable_path=f"{DRIVERS}\\operadriver.exe")
         elif _browser == "firefox":
             driver = webdriver.Firefox(executable_path=f"{DRIVERS}\\geckodriver.exe")
-        request.addfinalizer(driver.quit)
+        logger.info(f"Target browser: {_browser}")
+
+    def final():
+        logger.info(f"Finished test with name {test_name}")
+        driver.quit()
+
+    request.addfinalizer(final)
     return driver
