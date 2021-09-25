@@ -1,5 +1,7 @@
 import logging
 import os
+
+import allure
 import pytest
 from selenium import webdriver
 import subprocess
@@ -27,6 +29,7 @@ def pytest_addoption(parser):
     parser.addoption("--videos", action="store_true", default=False)
 
 
+@allure.step("Configure url (use docker if needed)")
 @pytest.fixture(scope="session")
 def url(request):
     target_url = request.config.getoption("--url")
@@ -64,6 +67,7 @@ def url(request):
         raise EnvironmentError("Что-то случилось с докером. Не могу подключиться!")
 
 
+@allure.step("Selenoid handler working")
 @pytest.fixture(scope="session")
 def selenoid_handler(request):
     _browser = request.config.getoption("--browser")
@@ -90,12 +94,13 @@ def selenoid_handler(request):
         return None
 
 
+@allure.step("Configure driver")
 @pytest.fixture
 def browser(request, selenoid_handler):
     _browser = request.config.getoption("--browser")
     logger = logging.getLogger("browser_fixture")
     test_name = request.node.name
-    logger.info(f"Started test with name {test_name} with browser: {_browser}")
+    logger.info(f"Started test: {test_name}")
 
     # configure run in selenoid
     if selenoid_handler:
@@ -115,7 +120,6 @@ def browser(request, selenoid_handler):
             command_executor=f"http://{selenoid_handler['selenoid_ip']}:4444/wd/hub",
             desired_capabilities=caps
         )
-        logger.info(f"Target browser: {_browser} and version: {selenoid_handler['bversion']}")
     else:
         if _browser == "chrome":
             driver = webdriver.Chrome(executable_path=f"{DRIVERS}\\chromedriver.exe")
@@ -123,11 +127,24 @@ def browser(request, selenoid_handler):
             driver = webdriver.Opera(executable_path=f"{DRIVERS}\\operadriver.exe")
         elif _browser == "firefox":
             driver = webdriver.Firefox(executable_path=f"{DRIVERS}\\geckodriver.exe")
-        logger.info(f"Target browser: {_browser}")
 
     def final():
-        logger.info(f"Finished test with name {test_name}")
+        logger.info(f"Finished test: {test_name}")
         driver.quit()
 
     request.addfinalizer(final)
+    logger.info(
+        f"Target browser: {driver.capabilities['browserName']} and version: {driver.capabilities['browserVersion']}")
     return driver
+
+
+@pytest.fixture(autouse=True)
+def get_environment(browser, request):
+    if request.config.getoption("--selenoid_ip"):
+        _executor = "selenoid"
+    else:
+        _executor = "local"
+    with open('allure-results/environment.properties', 'w') as f:
+        f.write(f"Browser={browser.capabilities['browserName']}\n")
+        f.write(f"Browser.Version={browser.capabilities['browserVersion']}\n")
+        f.write(f'Executor={_executor}')

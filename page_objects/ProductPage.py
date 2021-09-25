@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 from .BasePage import BasePage
 
@@ -23,7 +24,7 @@ class ProductPage(BasePage):
                       'GBP/EUR': 1.2809643913,
                       'GBP/USD': 1.6326309224,
                       }
-
+    @allure.step("Get {1} price of product")
     def get_price(self, price_type, current_currency):
         if price_type == "last":
             self.last_price = float(self._get_text(self.PRICE).replace(self.currency_names[current_currency], ''))
@@ -31,6 +32,7 @@ class ProductPage(BasePage):
             self.new_price = float(self._get_text(self.PRICE).replace(self.currency_names[current_currency], ''))
         return self
 
+    @allure.step("Set {1} currency")
     def set_currency(self, currency):
         if currency not in self.currency_names.keys():
             raise ValueError("Некорректная валюта!")
@@ -42,6 +44,7 @@ class ProductPage(BasePage):
             assert self._get_text(self.CURRENCY_SELECTOR).strip() == self.currency_names[currency]
         return self
 
+    @allure.step("Check new price when change currency from {1} to {2}")
     def check_new_price(self, rate_from, rate_to):
         if f'{rate_from}/{rate_to}' in self.currency_rates.keys():
             assert round(self.last_price * self.currency_rates[f'{rate_from}/{rate_to}'], 2) == self.new_price
@@ -51,11 +54,13 @@ class ProductPage(BasePage):
             raise ValueError(f"Не найдена пара {rate_to} и {rate_from} в бд")
         return self
 
+    @allure.step("Check tax to {1} currency")
     def check_tax(self, currency):
         cur_price_ex_tax = self._get_text(self.TAX).split(" ")[-1].replace(self.currency_names[currency], '')
         calculated_price_ex_tax = format(round(self.new_price * self.tax_factor / 0.05) * 0.05, '.2f')
         assert cur_price_ex_tax == calculated_price_ex_tax
 
+    @allure.step("Add to cart")
     def add_to_cart(self, cart_total):
         # click add to cart and check reaction (set 2 items)
         qty_input = self._element(self.QUANTITY_ITEMS_INPUT)
@@ -67,6 +72,7 @@ class ProductPage(BasePage):
         assert self._get_text(self.CART_TOTAL_ROW) == cart_total
         return self
 
+    @allure.step("Loading big picture of product by click on thumbnail")
     def loading_picture_by_click(self):
         # wait loading big picture by click on thumbnail
         self._element(self.THUMBNAIL_PIC).click()

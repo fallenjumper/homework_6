@@ -7,7 +7,6 @@ from elements.HeaderElements import HeaderElements
 
 
 class BasePage:
-
     def __init__(self, browser, page_url):
         self.browser = browser
         self.browser.get(page_url)

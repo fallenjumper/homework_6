@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 from .BasePage import BasePage
 import random
@@ -25,38 +26,45 @@ class AdminPage(BasePage):
     ROW_ITEMS = (By.CSS_SELECTOR, "td")
     LIST_OF_PRODUCTS = None
 
+    @allure.step("Check username placeholder")
     def check_placeholder(self):
         # check correct placeholder
         assert self._element(self.USERNAME_INPUT).get_attribute("placeholder") == "Username"
         return self
 
+    @allure.step("Check type of pass field")
     def check_type_pass_field(self):
         # check password input type is pass
         assert self._element(self.PASSWORD_INPUT).get_attribute("type") == "password"
         return self
 
+    @allure.step("Check text in link of forgotten password")
     def check_forgotten_link_text(self, url):
         # check correct link to restore password
         assert self._element(self.FORGOTTEN_PASS_LINK).get_attribute(
             "href") == f"{url}admin/index.php?route=common/forgotten"
         return self
 
+    @allure.step("Wait fail message about incorrect creds")
     def wait_fail_login_msg(self):
         self._wait_until(self.ERROR_LOGIN_MSG)
         return self
 
+    @allure.step("Try to login with username:{1} and password:{2}")
     def login_with(self, username, password):
         self._element(self.USERNAME_INPUT).send_keys(username)
         self._element(self.PASSWORD_INPUT).send_keys(password)
         self._element(self.SUBMIT_BTN).click()
         return self
 
+    @allure.step("Go to products page")
     def go_to_products_page(self):
         self._element(self.CATALOG_BTN).click()
         self._wait_until(self.PRODUCT_BTN).click()
         assert self._get_title() == "Products"
         return self
 
+    @allure.step("Check available products by random list ")
     def check_products_available(self, url, is_available_product):
         if not self.LIST_OF_PRODUCTS:
             raise ValueError("Список элементов для проверки пустой")
@@ -70,11 +78,13 @@ class AdminPage(BasePage):
             self._close_last_window()
         return self
 
+    @allure.step("Select checkbox product by id: {1}")
     def select_products_to_delete(self, product_id):
         for checkbox in self._elements(self.PRODUCT_CHECKBOX):
             if checkbox.get_attribute("value") == product_id:
                 checkbox.click()
 
+    @allure.step("Generate random list of products to future delete")
     def generate_random_list_products(self):
         # parse all id`s products from edit buttons links
         all_products = [product.get_attribute("href").split("=")[-1] for product in self._elements(self.EDIT_BTN)]
@@ -83,6 +93,7 @@ class AdminPage(BasePage):
             [x for x in all_products if x not in ['30', '40', '42', '43']], k=4)
         return self
 
+    @allure.step("Delete products by random list")
     def delete_products(self):
         for product_id in self.LIST_OF_PRODUCTS:
             self.select_products_to_delete(product_id)
@@ -90,6 +101,7 @@ class AdminPage(BasePage):
         self._accept_alert()
         return self
 
+    @allure.step("Add new product with name: {1}")
     def add_new_product(self, name_product):
         # fill base inputs
         self._element(self.ADD_BTN).click()

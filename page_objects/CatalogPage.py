@@ -2,6 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from .BasePage import BasePage
 from elements.ProductThumbs import ProductThumbs
+import allure
 
 
 class CatalogPage(BasePage):
@@ -12,6 +13,7 @@ class CatalogPage(BasePage):
     LAYOUT_CLASS = (By.CSS_SELECTOR, ".product-layout")
     LIST_VIEW_BTN = (By.CSS_SELECTOR, "#list-view")
 
+    @allure.step("Check counters of thumbs")
     def check_counters_of_thumbs(self):
         count_thumbs = len(self._elements(ProductThumbs.PRODUCT_THUMB))
         text_bottom_counter = self._get_text(self.BOTTOM_COUNTER)
@@ -21,6 +23,7 @@ class CatalogPage(BasePage):
         assert f"{self._get_title()} ({count_thumbs})" == self._get_text(self.LEFT_MENU_ACTIVE_LINK)
         return self
 
+    @allure.step("Check sorting")
     def check_sort(self):
         old_sort = self._elements(ProductThumbs.PRODUCT_THUMB)
         sort_selector = Select(self._element(self.SORT_SELECTOR))
@@ -28,6 +31,7 @@ class CatalogPage(BasePage):
         assert old_sort != self._elements(ProductThumbs.PRODUCT_THUMB)
         return self
 
+    @allure.step("Check change layout page")
     def check_change_layout(self):
         old_layout = self._element(self.LAYOUT_CLASS).get_attribute("class").split(" ")[1]
         self._element(self.LIST_VIEW_BTN).click()

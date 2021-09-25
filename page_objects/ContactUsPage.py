@@ -1,5 +1,6 @@
 from selenium.webdriver.common.by import By
 from .BasePage import BasePage
+import allure
 
 
 class ContactUsPage(BasePage):
@@ -12,7 +13,7 @@ class ContactUsPage(BasePage):
     ERROR_ENQUIRY_MSG = (By.XPATH, "//div[contains(text(), 'Enquiry must be between 10 and 3000 characters!')]")
     SUBMIT_BTN = (By.CSS_SELECTOR, ".btn.btn-primary")
 
-    # validate all errors on empty fields
+    @allure.step("validate all errors on empty fields")
     def validate_err_fields(self):
         self._element(self.SUBMIT_BTN).click()
         self._element(self.ERROR_NAME_MSG)
@@ -20,7 +21,7 @@ class ContactUsPage(BasePage):
         self._element(self.ERROR_ENQUIRY_MSG)
         return self
 
-    # do feedback and submit
+    @allure.step("do feedback and submit")
     def do_feedback(self):
         self._element(self.INPUT_NAME).send_keys('Name')
         self._element(self.INPUT_EMAIL).send_keys("user@mail.to")
