@@ -4,6 +4,7 @@ import os
 import allure
 import pytest
 from selenium import webdriver
+from selenium.webdriver.support.events import EventFiringWebDriver, AbstractEventListener
 import subprocess
 import socket
 import requests
@@ -135,6 +136,7 @@ def browser(request, selenoid_handler):
     request.addfinalizer(final)
     logger.info(
         f"Target browser: {driver.capabilities['browserName']} and version: {driver.capabilities['browserVersion']}")
+    driver = EventFiringWebDriver(driver, ExceptionListener())
     return driver
 
 
@@ -148,3 +150,13 @@ def get_environment(browser, request):
         f.write(f"Browser={browser.capabilities['browserName']}\n")
         f.write(f"Browser.Version={browser.capabilities['browserVersion']}\n")
         f.write(f'Executor={_executor}')
+
+
+# attach screenshot on fail test
+class ExceptionListener(AbstractEventListener):
+    def on_exception(self, exception, driver):
+        allure.attach(
+            name=f"{exception}",
+            body=driver.get_screenshot_as_png(),
+            attachment_type=allure.attachment_type.PNG
+        )

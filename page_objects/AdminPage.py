@@ -64,7 +64,7 @@ class AdminPage(BasePage):
         assert self._get_title() == "Products"
         return self
 
-    @allure.step("Check available products by random list ")
+    @allure.step("Check available products")
     def check_products_available(self, url, is_available_product):
         if not self.LIST_OF_PRODUCTS:
             raise ValueError("Список элементов для проверки пустой")
